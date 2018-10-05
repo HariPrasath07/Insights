@@ -41,10 +41,30 @@ public class DataExtractor{
 	private static Logger log = LogManager.getLogger(DataExtractor.class);
 	
 	private static boolean isDataExtractionInProgress = false;
-	private static final Pattern p = Pattern.compile("((?<!([A-Z]{1,10})-?)[A-Z]+-\\d+)");
+	private static Pattern p = Pattern.compile("((?<!([A-Z]{1,10})-?)(#|)+[A-Z]+(-|.)\\d+)");
+	private static String divider = null;
+	private static String sourceTool = null;
+	private static String destinationTool = null;
 	private int dataBatchSize = 2000;
 	
 	public void execute() {
+		CorrelationConfig correlationConfig = ApplicationConfigProvider.getInstance().getCorrelations();
+		if(correlationConfig != null) {
+			List<Correlation> corelations = loadCorrelations();
+			for(Correlation correlation: corelations) {
+				sourceTool=correlation.getSource().getToolName();
+				destinationTool=correlation.getDestination().getToolName();
+				switch(sourceTool.toLowerCase())
+				{
+					case "jira":
+						divider="-";
+						break;
+					case "pivotaltracker":
+						divider="#";
+						break;
+				}
+			}
+		}
 		if(!isDataExtractionInProgress) {
 			isDataExtractionInProgress = true;
 			updateSCMNodesWithJiraKey();
@@ -57,15 +77,15 @@ public class DataExtractor{
 	private void updateSCMNodesWithJiraKey() {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
-			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "jiraKeyProcessed");
-			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "jiraKeys");
+			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeyProcessed");
+			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeys");
 			String paginationCypher = "MATCH (n:SCM:DATA:RAW) where not exists(n.jiraKeyProcessed) and exists(n.commitId) return count(n) as count";
 			GraphResponse paginationResponse = dbHandler.executeCypherQuery(paginationCypher);
 			int resultCount = paginationResponse.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 					.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsInt();
 			while(resultCount > 0) {
 				long st = System.currentTimeMillis();
-				String scmDataFetchCypher = "MATCH (source:SCM:DATA:RAW) where not exists(source.jiraKeyProcessed) and exists(source.commitId) "
+				String scmDataFetchCypher = "MATCH (source:SCM:DATA:RAW) where not exists(source.almKeyProcessed) and exists(source.commitId) "
 						+ "WITH { uuid: source.uuid, commitId: source.commitId, message: source.message} "
 						+ "as data limit "+dataBatchSize+" return collect(data)";
 				GraphResponse response = dbHandler.executeCypherQuery(scmDataFetchCypher);
@@ -77,9 +97,9 @@ public class DataExtractor{
 				JsonArray dataList = rows.get(0).getAsJsonArray();
 				int processedRecords = dataList.size();
 				String addJiraKeysCypher = "UNWIND {props} as properties MATCH (source:SCM:DATA:RAW {uuid : properties.uuid, commitId: properties.commitId}) "
-						+ "set source.jiraKeys = properties.jiraKeys, source.jiraKeyProcessed = true return count(source)";
+						+ "set source.almKeys = properties.almKeys, source.almKeyProcessed = true return count(source)";
 				String updateRawLabelCypher = "UNWIND {props} as properties MATCH (source:SCM:DATA:RAW {uuid : properties.uuid, commitId: properties.commitId}) "
-						+ "set source.jiraKeyProcessed = true return count(source)";
+						+ "set source.almKeyProcessed = true return count(source)";
 				List<JsonObject> jiraKeysCypherProps = new ArrayList<JsonObject>();
 				List<JsonObject> updateRawLabelCypherProps = new ArrayList<JsonObject>();
 				JsonObject data = null;
@@ -88,11 +108,11 @@ public class DataExtractor{
 					JsonElement messageElem = dataJson.get("message");
 					if(messageElem.isJsonPrimitive()) {
 						String message = messageElem.getAsString();
-						JsonArray jiraKeys = new JsonArray();
-						while(message.contains("-")) {
+						JsonArray almKeys = new JsonArray();
+						while(message.contains(divider)) {
 							Matcher m = p.matcher(message);
 							if(m.find()) {
-								jiraKeys.add(m.group());
+								almKeys.add(m.group());
 								message = message.replaceAll(m.group(), "");
 							}else {
 								break;
@@ -101,8 +121,8 @@ public class DataExtractor{
 						data = new JsonObject();
 						data.addProperty("uuid", dataJson.get("uuid").getAsString());
 						data.addProperty("commitId", dataJson.get("commitId").getAsString());
-						if(jiraKeys.size() > 0) {
-							data.add("jiraKeys", jiraKeys);
+						if(almKeys.size() > 0) {
+							data.add("almKeys", almKeys);
 							jiraKeysCypherProps.add(data);
 						}else {
 							updateRawLabelCypherProps.add(data);
@@ -121,7 +141,7 @@ public class DataExtractor{
 				log.debug("Processed "+processedRecords+" SCM records, time taken: "+(System.currentTimeMillis() - st) + " ms");
 			}
 		} catch (GraphDBException e) {
-			log.error("Unable to extract JIRA keys from SCM Commit messages", e);
+			log.error("Unable to extract "+sourceTool+" keys from SCM Commit messages", e);
 		}
 	}
 	
@@ -131,31 +151,31 @@ public class DataExtractor{
 			int processedRecords = 1;
 			while(processedRecords > 0) {
 				long st = System.currentTimeMillis();
-				String scmCleanUpCypher = "MATCH (n:SCM:DATA) where not n:RAW and exists(n.jiraKeyProcessed) "
-						+ "WITH distinct n limit "+dataBatchSize+" remove n.jiraKeyProcessed return count(n)";
+				String scmCleanUpCypher = "MATCH (n:SCM:DATA) where not n:RAW and exists(n.almKeyProcessed) "
+						+ "WITH distinct n limit "+dataBatchSize+" remove n.almKeyProcessed return count(n)";
 				GraphResponse response = dbHandler.executeCypherQuery(scmCleanUpCypher);
 				processedRecords = response.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 						.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsInt();
 				log.debug("Processed "+processedRecords+" SCM records, time taken: "+(System.currentTimeMillis() - st) + " ms");
 			}
 		} catch (GraphDBException e) {
-			log.error("Unable to extract JIRA keys from SCM Commit messages", e);
+			log.error("Unable to extract "+sourceTool+" keys from SCM Commit messages", e);
 		}
 	}
 	
 	private void enrichJiraData() {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
-			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("JIRA", "_PORTFOLIO_");
-			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("JIRA", "_PRODUCT_");
-			String jiraProjectCypher = "match (n:JIRA:DATA) where not exists(n._PORTFOLIO_) WITH distinct n.projectKey as projectKey, count(n) as count " + 
-						"OPTIONAL MATCH(m:JIRA:METADATA) where m.pkey=projectKey "
-						+ "WITH {projectKey: projectKey , count: count, portfolio: m.PORTFOLIO, product: m.PRODUCT} as data "
-						+ "return collect(data) as data";
+			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex(sourceTool, "_PORTFOLIO_");
+			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex(sourceTool, "_PRODUCT_");
+			String jiraProjectCypher = "match (n:"+sourceTool+":DATA) where not exists(n._PORTFOLIO_) WITH distinct n.projectKey as projectKey, count(n) as count " + 
+					"OPTIONAL MATCH(m:"+sourceTool+":METADATA) where m.pkey=projectKey "
+					+ "WITH {projectKey: projectKey , count: count, portfolio: m.PORTFOLIO, product: m.PRODUCT} as data "
+					+ "return collect(data) as data";
 			GraphResponse paginationResponse = dbHandler.executeCypherQuery(jiraProjectCypher);
 			JsonArray data = paginationResponse.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 					.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsJsonArray();
-			String jiraDataEnrichmentCypher = "UNWIND {props} as properties MATCH(n:JIRA {projectKey: properties.projectKey}) where not exists(n._PORTFOLIO_) "
+			String jiraDataEnrichmentCypher = "UNWIND {props} as properties MATCH(n:"+sourceTool+" {projectKey: properties.projectKey}) where not exists(n._PORTFOLIO_) "
 					+ "set n._PORTFOLIO_ = properties.portfolio, n._PRODUCT_ = properties.product return count(n)";
 			List<JsonObject> projectList = new ArrayList<JsonObject>();
 			List<List<JsonObject>> projectProcessingBatches = new ArrayList<List<JsonObject>>();
@@ -184,7 +204,7 @@ public class DataExtractor{
 						processedRecords += obj.get("count").getAsInt();
 					}
 					JsonObject jiraEnrichmentResponse = dbHandler.bulkCreateNodes(batch, null, jiraDataEnrichmentCypher);
-					log.debug("Processed/Enriched "+processedRecords+" JIRA records, time taken: "+(System.currentTimeMillis() - st) + " ms");
+					log.debug("Processed/Enriched "+processedRecords+" "+sourceTool+" records, time taken: "+(System.currentTimeMillis() - st) + " ms");
 					log.debug(jiraEnrichmentResponse);
 				}
 			}
