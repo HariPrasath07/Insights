@@ -19,7 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Arrays;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,19 +56,19 @@ public class DataExtractor{
 	
 	private static boolean isDataExtractionInProgress = false;
 	private static Pattern p = Pattern.compile("((?<!([A-Z]{1,10})-?)(#|)+[A-Z]+(-|.)\\d+)");
-	private static String divider = null;
 	private static String sourceTool = null;
 	private static String destinationTool = null;
 	private int dataBatchSize = 2000;
 	
 	public void execute() {
 		CorrelationConfig correlationConfig = ApplicationConfigProvider.getInstance().getCorrelations();
+		String divider=null;
 		if(correlationConfig != null) {
 			List<Correlation> corelations = loadCorrelations();
 			for(Correlation correlation: corelations) {
 				sourceTool=correlation.getSource().getToolName();
 				destinationTool=correlation.getDestination().getToolName();
-				divider=correlation.getSource().getDivider();
+				divider=correlation.getSource().getAlmkeyPattern();
 //				switch(sourceTool.toLowerCase())
 //				{
 //					case "jira":
@@ -75,14 +82,14 @@ public class DataExtractor{
 		}
 		if(!isDataExtractionInProgress) {
 			isDataExtractionInProgress = true;
-			updateSCMNodesWithJiraKey();
+			updateSCMNodesWithAlmKey(divider);
 			cleanSCMNodes();
-			enrichJiraData();
+			enrichAlmData();
 			isDataExtractionInProgress = false;
 		}
 	}
 	
-	private void updateSCMNodesWithJiraKey() {
+	private void updateSCMNodesWithAlmKey(String divider) {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
 			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeyProcessed");
@@ -104,11 +111,11 @@ public class DataExtractor{
 				}
 				JsonArray dataList = rows.get(0).getAsJsonArray();
 				int processedRecords = dataList.size();
-				String addJiraKeysCypher = "UNWIND {props} as properties MATCH (source:SCM:DATA:RAW {uuid : properties.uuid, commitId: properties.commitId}) "
+				String addAlmKeysCypher = "UNWIND {props} as properties MATCH (source:SCM:DATA:RAW {uuid : properties.uuid, commitId: properties.commitId}) "
 						+ "set source.almKeys = properties.almKeys, source.almKeyProcessed = true return count(source)";
 				String updateRawLabelCypher = "UNWIND {props} as properties MATCH (source:SCM:DATA:RAW {uuid : properties.uuid, commitId: properties.commitId}) "
 						+ "set source.almKeyProcessed = true return count(source)";
-				List<JsonObject> jiraKeysCypherProps = new ArrayList<JsonObject>();
+				List<JsonObject> almKeysCypherProps = new ArrayList<JsonObject>();
 				List<JsonObject> updateRawLabelCypherProps = new ArrayList<JsonObject>();
 				JsonObject data = null;
 				for(JsonElement dataElem : dataList) {
@@ -131,7 +138,7 @@ public class DataExtractor{
 						data.addProperty("commitId", dataJson.get("commitId").getAsString());
 						if(almKeys.size() > 0) {
 							data.add("almKeys", almKeys);
-							jiraKeysCypherProps.add(data);
+							almKeysCypherProps.add(data);
 						}else {
 							updateRawLabelCypherProps.add(data);
 						}
@@ -141,8 +148,8 @@ public class DataExtractor{
 					JsonObject bulkCreateNodes = dbHandler.bulkCreateNodes(updateRawLabelCypherProps, null, updateRawLabelCypher);
 					log.debug(bulkCreateNodes);
 				}
-				if(jiraKeysCypherProps.size() > 0) {
-					JsonObject bulkCreateNodes = dbHandler.bulkCreateNodes(jiraKeysCypherProps, null, addJiraKeysCypher);
+				if(almKeysCypherProps.size() > 0) {
+					JsonObject bulkCreateNodes = dbHandler.bulkCreateNodes(almKeysCypherProps, null, addAlmKeysCypher);
 					log.debug(bulkCreateNodes);
 				}
 				resultCount = resultCount - dataBatchSize;
@@ -171,19 +178,19 @@ public class DataExtractor{
 		}
 	}
 	
-	private void enrichJiraData() {
+	private void enrichAlmData() {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
 			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex(sourceTool, "_PORTFOLIO_");
 			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex(sourceTool, "_PRODUCT_");
-			String jiraProjectCypher = "match (n:"+sourceTool+":DATA) where not exists(n._PORTFOLIO_) WITH distinct n.projectKey as projectKey, count(n) as count " + 
+			String almProjectCypher = "match (n:"+sourceTool+":DATA) where not exists(n._PORTFOLIO_) WITH distinct n.projectKey as projectKey, count(n) as count " + 
 					"OPTIONAL MATCH(m:"+sourceTool+":METADATA) where m.pkey=projectKey "
 					+ "WITH {projectKey: projectKey , count: count, portfolio: m.PORTFOLIO, product: m.PRODUCT} as data "
 					+ "return collect(data) as data";
-			GraphResponse paginationResponse = dbHandler.executeCypherQuery(jiraProjectCypher);
+			GraphResponse paginationResponse = dbHandler.executeCypherQuery(almProjectCypher);
 			JsonArray data = paginationResponse.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 					.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsJsonArray();
-			String jiraDataEnrichmentCypher = "UNWIND {props} as properties MATCH(n:"+sourceTool+" {projectKey: properties.projectKey}) where not exists(n._PORTFOLIO_) "
+			String almDataEnrichmentCypher = "UNWIND {props} as properties MATCH(n:"+sourceTool+" {projectKey: properties.projectKey}) where not exists(n._PORTFOLIO_) "
 					+ "set n._PORTFOLIO_ = properties.portfolio, n._PRODUCT_ = properties.product return count(n)";
 			List<JsonObject> projectList = new ArrayList<JsonObject>();
 			List<List<JsonObject>> projectProcessingBatches = new ArrayList<List<JsonObject>>();
@@ -211,13 +218,43 @@ public class DataExtractor{
 					for(JsonObject obj : batch) {
 						processedRecords += obj.get("count").getAsInt();
 					}
-					JsonObject jiraEnrichmentResponse = dbHandler.bulkCreateNodes(batch, null, jiraDataEnrichmentCypher);
+					JsonObject almEnrichmentResponse = dbHandler.bulkCreateNodes(batch, null, almDataEnrichmentCypher);
 					log.debug("Processed/Enriched "+processedRecords+" "+sourceTool+" records, time taken: "+(System.currentTimeMillis() - st) + " ms");
-					log.debug(jiraEnrichmentResponse);
+					log.debug(almEnrichmentResponse);
 				}
 			}
 		} catch (GraphDBException e) {
 			log.error(e);
 		}
+	}
+	private List<Correlation> loadCorrelations() {
+		BufferedReader reader = null;
+		InputStream in = null;
+		List<Correlation> correlations = null;
+		File correlationTemplate = new File(ConfigOptions.CORRELATION_FILE_RESOLVED_PATH);
+		try {
+			if (correlationTemplate.exists()) {
+				reader = new BufferedReader(new FileReader(correlationTemplate));
+			} else {
+				in = getClass().getResourceAsStream("/" + ConfigOptions.CORRELATION_TEMPLATE);
+				reader = new BufferedReader(new InputStreamReader(in));
+			}
+			Correlation[] correlationArray = new Gson().fromJson(reader, Correlation[].class);
+			correlations = Arrays.asList(correlationArray);
+		} catch (FileNotFoundException e) {
+			log.error("Correlations.json file not found.", e);
+		} finally {
+			try {
+				if (in != null) {
+					in.close();
+				}
+				if (reader != null) {
+					reader.close();
+				}
+			} catch (IOException e) {
+				log.error("Unable to read the correlation.json file.", e);
+			}
+		}
+		return correlations;
 	}
 }

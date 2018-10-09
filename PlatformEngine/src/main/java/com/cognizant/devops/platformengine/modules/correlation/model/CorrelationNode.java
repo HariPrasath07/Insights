@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class CorrelationNode {
 	private String toolName;
-	private String divider;
+	private String almkeyPattern;
 	private List<String> fields;
 	
 	public String getToolName() {
@@ -31,11 +31,11 @@ public class CorrelationNode {
 	public void setToolName(String toolName) {
 		this.toolName = toolName;
 	}
-	public String getDivider() {
-		return divider;
+	public String getAlmkeyPattern() {
+		return almkeyPattern;
 	}
-	public void setDivider(String divider) {
-		this.divider = divider;
+	public void setAlmkeyPattern(String almkeyPattern) {
+		this.almkeyPattern = almkeyPattern;
 	}
 	public List<String> getFields() {
 		return fields;
