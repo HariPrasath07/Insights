@@ -22,6 +22,7 @@ import java.util.List;
  */
 public class CorrelationNode {
 	private String toolName;
+	private String divider;
 	private List<String> fields;
 	
 	public String getToolName() {
@@ -29,6 +30,12 @@ public class CorrelationNode {
 	}
 	public void setToolName(String toolName) {
 		this.toolName = toolName;
+	}
+	public String getDivider() {
+		return divider;
+	}
+	public void setDivider(String divider) {
+		this.divider = divider;
 	}
 	public List<String> getFields() {
 		return fields;

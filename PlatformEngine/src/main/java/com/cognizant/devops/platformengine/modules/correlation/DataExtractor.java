@@ -23,10 +23,17 @@ import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.cognizant.devops.platformcommons.config.ApplicationConfigProvider;
+import com.cognizant.devops.platformcommons.config.CorrelationConfig;
+
+import com.cognizant.devops.platformcommons.constants.ConfigOptions;
+import com.cognizant.devops.platformengine.modules.correlation.model.Correlation;
+
 import com.cognizant.devops.platformcommons.dal.neo4j.GraphDBException;
 import com.cognizant.devops.platformcommons.dal.neo4j.GraphResponse;
 import com.cognizant.devops.platformcommons.dal.neo4j.Neo4jDBHandler;
 import com.cognizant.devops.platformcommons.dal.neo4j.Neo4jFieldIndexRegistry;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -54,15 +61,16 @@ public class DataExtractor{
 			for(Correlation correlation: corelations) {
 				sourceTool=correlation.getSource().getToolName();
 				destinationTool=correlation.getDestination().getToolName();
-				switch(sourceTool.toLowerCase())
-				{
-					case "jira":
-						divider="-";
-						break;
-					case "pivotaltracker":
-						divider="#";
-						break;
-				}
+				divider=correlation.getSource().getDivider();
+//				switch(sourceTool.toLowerCase())
+//				{
+//					case "jira":
+//						divider="-";
+//						break;
+//					case "pivotaltracker":
+//						divider="#";
+//						break;
+//				}
 			}
 		}
 		if(!isDataExtractionInProgress) {
@@ -79,7 +87,7 @@ public class DataExtractor{
 		try {
 			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeyProcessed");
 			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeys");
-			String paginationCypher = "MATCH (n:SCM:DATA:RAW) where not exists(n.jiraKeyProcessed) and exists(n.commitId) return count(n) as count";
+			String paginationCypher = "MATCH (n:SCM:DATA:RAW) where not exists(n.almKeyProcessed) and exists(n.commitId) return count(n) as count";
 			GraphResponse paginationResponse = dbHandler.executeCypherQuery(paginationCypher);
 			int resultCount = paginationResponse.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 					.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsInt();

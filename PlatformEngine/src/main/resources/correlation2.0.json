@@ -23,6 +23,7 @@
     },
     "source": {
       "toolName" : "JIRA",
+      "divider": "-",
       "fields": [
         "key"
       ]
