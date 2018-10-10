@@ -292,6 +292,7 @@ public class Neo4jDBHandler {
 				// .resource("http://localhost:7474/db/data/transaction/commit");
 				.resource(ApplicationConfigProvider.getInstance().getGraph().getEndpoint()
 						+ "/db/data/transaction/commit");
+		Client.create().setConnectTimeout(ApplicationConfigProvider.getInstance().getGraph().getConnectionExpiryTimeOut() * 1000);
 		ClientResponse response = resource.accept(MediaType.APPLICATION_JSON)
 				.header("Authorization", ApplicationConfigProvider.getInstance().getGraph().getAuthToken())
 				// ClientResponse response = resource.accept( MediaType.APPLICATION_JSON
@@ -308,6 +309,7 @@ public class Neo4jDBHandler {
 	public JsonArray loadFieldIndices() {
 		WebResource resource = Client.create()
 				.resource(ApplicationConfigProvider.getInstance().getGraph().getEndpoint() + "/db/data/schema/index");
+		Client.create().setConnectTimeout(ApplicationConfigProvider.getInstance().getGraph().getConnectionExpiryTimeOut() * 1000);
 		ClientResponse response = resource.accept(MediaType.APPLICATION_JSON)
 				.header("Authorization", ApplicationConfigProvider.getInstance().getGraph().getAuthToken())
 				.type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
@@ -328,6 +330,7 @@ public class Neo4jDBHandler {
 		requestJson.add("property_keys", properties);
 		WebResource resource = Client.create().resource(
 				ApplicationConfigProvider.getInstance().getGraph().getEndpoint() + "/db/data/schema/index/" + label);
+		Client.create().setConnectTimeout(ApplicationConfigProvider.getInstance().getGraph().getConnectionExpiryTimeOut() * 1000);
 		ClientResponse response = resource.accept(MediaType.APPLICATION_JSON)
 				.header("Authorization", ApplicationConfigProvider.getInstance().getGraph().getAuthToken())
 				.type(MediaType.APPLICATION_JSON).entity(requestJson.toString()).post(ClientResponse.class);
