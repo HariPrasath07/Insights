@@ -69,15 +69,6 @@ public class DataExtractor{
 				sourceTool=correlation.getSource().getToolName();
 				destinationTool=correlation.getDestination().getToolName();
 				divider=correlation.getSource().getAlmkeyPattern();
-//				switch(sourceTool.toLowerCase())
-//				{
-//					case "jira":
-//						divider="-";
-//						break;
-//					case "pivotaltracker":
-//						divider="#";
-//						break;
-//				}
 			}
 		}
 		if(!isDataExtractionInProgress) {
