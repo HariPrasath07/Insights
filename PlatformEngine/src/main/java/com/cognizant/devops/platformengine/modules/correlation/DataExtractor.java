@@ -69,18 +69,22 @@ public class DataExtractor{
 				sourceTool=correlation.getSource().getToolName();
 				destinationTool=correlation.getDestination().getToolName();
 				divider=correlation.getSource().getAlmkeyPattern();
+				if(!isDataExtractionInProgress) {
+					if(correlation.getSource().getToolCategory().equals("ALM") && correlation.getDestination().getToolCategory().equals("SCM")) {
+						isDataExtractionInProgress = true;
+						updateSCMNodesWithAlmKey(divider, sourceTool);
+						cleanSCMNodes(sourceTool);
+						if(correlation.getSource().isEnrichAlmData()) {
+							enrichAlmData(sourceTool);
+						}
+						isDataExtractionInProgress = false;
+					}
+				}
 			}
-		}
-		if(!isDataExtractionInProgress) {
-			isDataExtractionInProgress = true;
-			updateSCMNodesWithAlmKey(divider);
-			cleanSCMNodes();
-			enrichAlmData();
-			isDataExtractionInProgress = false;
 		}
 	}
 	
-	private void updateSCMNodesWithAlmKey(String divider) {
+	private void updateSCMNodesWithAlmKey(String divider, String sourceTool) {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
 			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeyProcessed");
@@ -151,7 +155,7 @@ public class DataExtractor{
 		}
 	}
 	
-	private void cleanSCMNodes() {
+	private void cleanSCMNodes(String sourceTool) {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
 			int processedRecords = 1;
@@ -169,7 +173,7 @@ public class DataExtractor{
 		}
 	}
 	
-	private void enrichAlmData() {
+	private void enrichAlmData(String sourceTool) {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
 			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex(sourceTool, "_PORTFOLIO_");
