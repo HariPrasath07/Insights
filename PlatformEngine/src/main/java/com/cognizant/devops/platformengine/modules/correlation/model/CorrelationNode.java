@@ -25,6 +25,7 @@ public class CorrelationNode {
 	private String almkeyPattern;
 	private List<String> fields;
 	private boolean enrichAlmData=false;
+	private String toolCategory;
 	public String getToolName() {
 		return toolName;
 	}
@@ -42,6 +43,12 @@ public class CorrelationNode {
 	}
 	public void setFields(List<String> fields) {
 		this.fields = fields;
+	}
+	public String getToolCategory() {
+		return toolCategory;
+	}
+	public void setToolCategory(String toolCategory) {
+		this.toolCategory = toolCategory;
 	}
 	public boolean isEnrichAlmData() {
 		return enrichAlmData;
