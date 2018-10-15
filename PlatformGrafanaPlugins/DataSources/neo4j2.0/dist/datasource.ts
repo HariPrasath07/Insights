@@ -176,19 +176,15 @@ export default class Neo4jDatasource {
     var j;
     for (j in keywords) {
       var query = (cypherQuery.statements[0].statement.toString()).toLowerCase();
-	if(query.indexOf( " " + keywords[j] + " " ) >= 0){console.log(keywords[j]+" is present in inverted comma");flag = 1; break;}
-	//if (query.indexOf( " "+keywords[j]) >= 0) {console.log(" "+keywords[j]+" ");flag = 1; break;}
-	//if(query.indexOf( keywords[j] + " " ) >= 0){console.log("2nd");flag = 1; break;}
+	if(query.indexOf( " " + keywords[j] + " " ) >= 0){console.log(keywords[j]+" is present as an individual word.");flag = 1; break;}
+	if(query.indexOf( "\n" + keywords[j] ) >= 0 && query.indexOf( "\n" + keywords[j] + " ") >= 0){console.log(keywords[j]+" is present after new line.");flag = 1; break;}
 	if(query.indexOf( keywords[j] + ")" ) >= 0){console.log(keywords[j]+" is present in before ) brace.");flag = 1; break;}
 	if(query.indexOf( keywords[j] + "(" ) >= 0){console.log(keywords[j]+" is present in before ( brace.");flag = 1; break;}
-
 	if(query.indexOf( ")"+keywords[j]) >= 0){console.log(keywords[j]+" is present in after ) brace.");flag = 1; break;}
 	if(query.indexOf( "("+keywords[j]) >= 0){console.log(keywords[j]+" is present in after ( brace.");flag = 1; break;}
-
 	if(query.indexOf( keywords[j] + "\n" ) >= 0){console.log(keywords[j]+" is present before new line.");flag = 1; break;}
-	if(query.indexOf( "\n" + keywords[j] ) >= 0){console.log(keywords[j]+" is present after new line.");flag = 1; break;}
-
-	if(query.indexOf( keywords[j] + " (") >= 0){console.log(keywords[j]+" is present before ");flag = 1; break;}
+	
+	//if(query.indexOf( keywords[j] + " (") >= 0){console.log(keywords[j]+" is present before ");flag = 1; break;}
     }
     if (flag == 0) { return queryCorrect; }
     else {
