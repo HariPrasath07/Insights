@@ -42,8 +42,7 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 			QueryCachingConstants.LOAD_CACHETIME_QUERY_FROM_RESOURCES);
 	private final String LOAD_CACHEVARIANCE_QUERY_FROM_RESOURCES = loadEsQueryFromJsonFile(
 			QueryCachingConstants.LOAD_CACHEVARIANCE_QUERY_FROM_RESOURCES);
-	// private final ElasticSearchDBHandler esDbHandler = new
-	// ElasticSearchDBHandler();
+	private final ElasticSearchDBHandler esDbHandler = new ElasticSearchDBHandler();
 
 	@Override
 	public JsonObject getCacheResults(String requestPayload) {
@@ -160,7 +159,6 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 							startTime, endTime, queryHash);
 				}
 
-				ElasticSearchDBHandler esDbHandler = new ElasticSearchDBHandler();
 				JsonObject esResponse = esDbHandler.queryES(sourceESCacheUrl + "/_search", esQuery);
 				JsonArray esResponseArray = new JsonArray();
 
