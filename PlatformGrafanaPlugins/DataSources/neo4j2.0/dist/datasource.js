@@ -59,10 +59,73 @@ System.register([], function(exports_1) {
                   2. Provide group by options (group by a result column)
                   3. Table format
                 */
+                Neo4jDatasource.prototype.processStatusQueryResponse = function (data, options, timestamp) {
+                    var targets = data['targets'];
+                    var results = data['results'];
+                    var defaultResponse = options ? false : true;
+                    var response = [];
+                    for (var i_1 in targets) {
+                        var target = targets[i_1];
+                        var result = results[i_1];
+                        if (target.timeSeries) {
+                            var datapoints = [];
+                            var targetResponse = {
+                                target: target.refId,
+                                datapoints: datapoints
+                            };
+                            var targetDatapointsMap = {};
+                            var rows = result.data;
+                            var multiSeriesResponse = false;
+                            var i;
+                            for (var r in rows) {
+                                var row = rows[r].row;
+                                var targetName = row[0];
+                                var targetDataPoints = targetDatapointsMap[targetName];
+                                if (targetDataPoints === undefined) {
+                                    targetDataPoints = [];
+                                    targetDatapointsMap[targetName] = targetDataPoints;
+                                    response.push({
+                                        target: targetName,
+                                        datapoints: targetDataPoints
+                                    });
+                                    multiSeriesResponse = true;
+                                }
+                                targetDataPoints.push([row[1], timestamp * 1000]);
+                            }
+                            if (!multiSeriesResponse) {
+                                response.push(targetResponse);
+                            }
+                        }
+                        else if (target.table) {
+                            var responseColumns = [];
+                            var responseRows = [];
+                            var tableResponse = { columns: responseColumns, rows: responseRows, type: "table" };
+                            var columns = result.columns;
+                            var data_1 = result.data;
+                            for (var columnId in columns) {
+                                responseColumns.push({ text: columns[columnId] });
+                            }
+                            var rows = result.data;
+                            for (var r in rows) {
+                                responseRows.push(rows[r].row);
+                            }
+                            response.push(tableResponse);
+                        }
+                        else {
+                            defaultResponse = true;
+                            break;
+                        }
+                    }
+                    return response;
+                };
                 Neo4jDatasource.prototype.processResponse = function (data, options) {
                     var timestamp = new Date().getTime() * 1000;
                     if (options && options.range && options.range.to) {
                         timestamp = options.range.to.valueOf();
+                    }
+                    var enableTarget = (options.targets[0].enableTarget) ? options.targets[0].enableTarget : false;
+                    if (enableTarget) {
+                        return this.processStatusQueryResponse(data, options, timestamp);
                     }
                     var targets = data['targets'];
                     var results = data['results'];
@@ -97,11 +160,11 @@ System.register([], function(exports_1) {
                                         });
                                         multiSeriesResponse = true;
                                     }
-                                    targetDataPoints.push([row[1], row[0] * 1000]);
+                                    targetDataPoints.push([row[1], row[0] * 3000]);
                                 }
                                 else {
                                     //Assuming the first column will be the time and second column will be the data.
-                                    datapoints.push([row[1], row[0] * 1000]);
+                                    datapoints.push([row[1], row[0] * 2000]);
                                 }
                             }
                             if (!multiSeriesResponse) {
@@ -113,7 +176,7 @@ System.register([], function(exports_1) {
                             var responseRows = [];
                             var tableResponse = { columns: responseColumns, rows: responseRows, type: "table" };
                             var columns = result.columns;
-                            var data_1 = result.data;
+                            var data_2 = result.data;
                             for (var columnId in columns) {
                                 responseColumns.push({ text: columns[columnId] });
                             }
@@ -178,23 +241,38 @@ System.register([], function(exports_1) {
                     var j;
                     for (j in keywords) {
                         var query = (cypherQuery.statements[0].statement.toString()).toLowerCase();
-                        if (query.indexOf(" " + keywords[j]) >= 0) {
-                            console.log("1st");
+                        if (query.indexOf(" " + keywords[j] + " ") >= 0) {
+                            console.log(keywords[j] + " is present as an individual word.");
                             flag = 1;
                             break;
                         }
-                        if (query.indexOf(keywords[j] + " ") >= 0) {
-                            console.log("2nd");
+                        if (query.indexOf("\n" + keywords[j]) >= 0 && query.indexOf("\n" + keywords[j] + " ") >= 0) {
+                            console.log(keywords[j] + " is present after new line.");
                             flag = 1;
                             break;
                         }
                         if (query.indexOf(keywords[j] + ")") >= 0) {
-                            console.log("3rd");
+                            console.log(keywords[j] + " is present in before ) brace.");
                             flag = 1;
                             break;
                         }
                         if (query.indexOf(keywords[j] + "(") >= 0) {
-                            console.log("4th");
+                            console.log(keywords[j] + " is present in before ( brace.");
+                            flag = 1;
+                            break;
+                        }
+                        if (query.indexOf(")" + keywords[j]) >= 0) {
+                            console.log(keywords[j] + " is present in after ) brace.");
+                            flag = 1;
+                            break;
+                        }
+                        if (query.indexOf("(" + keywords[j]) >= 0) {
+                            console.log(keywords[j] + " is present in after ( brace.");
+                            flag = 1;
+                            break;
+                        }
+                        if (query.indexOf(keywords[j] + "\n") >= 0) {
+                            console.log(keywords[j] + " is present before new line.");
                             flag = 1;
                             break;
                         }

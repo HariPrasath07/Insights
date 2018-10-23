@@ -60,11 +60,73 @@ export default class Neo4jDatasource {
     2. Provide group by options (group by a result column)
     3. Table format
   */
+	processStatusQueryResponse(data, options, timestamp) {
+			let targets = data['targets'];
+			let results = data['results'];
+			let defaultResponse = options ? false : true;
+			let response = []
+			for (let i in targets) {
+			  let target = targets[i];
+			  let result = results[i];
+			  if (target.timeSeries) {
+				let datapoints = [];
+				let targetResponse = {
+				  target: target.refId,
+				  datapoints: datapoints
+				};
+				let targetDatapointsMap = {}
+				let rows = result.data;
+				let multiSeriesResponse = false;
+				var i:number;
+				for (let r in rows) {
+						let row = rows[r].row;
+						let targetName = row[0];
+						let targetDataPoints = targetDatapointsMap[targetName];
+						if (targetDataPoints === undefined) {
+								targetDataPoints = [];
+								targetDatapointsMap[targetName] = targetDataPoints;
+								response.push({
+										target: targetName,
+										datapoints: targetDataPoints
+								});
+								multiSeriesResponse = true;
+						}
+						targetDataPoints.push([row[1], timestamp * 1000]);				
+				}
+				if (!multiSeriesResponse) {
+				  response.push(targetResponse);
+				}
+			  } else if (target.table) {
+				let responseColumns = [];
+				let responseRows = [];
+				let tableResponse = { columns: responseColumns, rows: responseRows, type: "table" };
+				let columns = result.columns;
+				let data = result.data;
+				for (let columnId in columns) {
+				  responseColumns.push({ text: columns[columnId] });
+				}
+				let rows = result.data;
+				for (let r in rows) {
+				  responseRows.push(rows[r].row);
+				}
+				response.push(tableResponse);
+			  } else {
+				defaultResponse = true;
+				break;
+			  }
+			}
+		return response;		
+	}
   processResponse(data, options) {
     let timestamp = new Date().getTime() * 1000;
     if (options && options.range && options.range.to) {
       timestamp = options.range.to.valueOf();
     }
+	var enableTarget = (options.targets[0].enableTarget) ? options.targets[0].enableTarget : false;
+	if(enableTarget)
+	{
+		return this.processStatusQueryResponse(data, options, timestamp);
+	}
     let targets = data['targets'];
     let results = data['results'];
     let defaultResponse = options ? false : true;
@@ -97,10 +159,10 @@ export default class Neo4jDatasource {
               });
               multiSeriesResponse = true;
             }
-            targetDataPoints.push([row[1], row[0] * 1000]);
+            targetDataPoints.push([row[1], row[0] * 3000]);
           } else {
             //Assuming the first column will be the time and second column will be the data.
-            datapoints.push([row[1], row[0] * 1000]);
+            datapoints.push([row[1], row[0] * 2000]);
           }
         }
         if (!multiSeriesResponse) {
@@ -176,10 +238,15 @@ export default class Neo4jDatasource {
     var j;
     for (j in keywords) {
       var query = (cypherQuery.statements[0].statement.toString()).toLowerCase();
-	if (query.indexOf( " "+keywords[j] ) >= 0) {console.log("1st");flag = 1; break;}
-	if(query.indexOf( keywords[j] + " " ) >= 0){console.log("2nd");flag = 1; break;}
-	if(query.indexOf( keywords[j] + ")" ) >= 0){console.log("3rd");flag = 1; break;}
-	if(query.indexOf( keywords[j] + "(" ) >= 0){console.log("4th");flag = 1; break;}
+	if(query.indexOf( " " + keywords[j] + " " ) >= 0){console.log(keywords[j]+" is present as an individual word.");flag = 1; break;}
+	if(query.indexOf( "\n" + keywords[j] ) >= 0 && query.indexOf( "\n" + keywords[j] + " ") >= 0){console.log(keywords[j]+" is present after new line.");flag = 1; break;}
+	if(query.indexOf( keywords[j] + ")" ) >= 0){console.log(keywords[j]+" is present in before ) brace.");flag = 1; break;}
+	if(query.indexOf( keywords[j] + "(" ) >= 0){console.log(keywords[j]+" is present in before ( brace.");flag = 1; break;}
+	if(query.indexOf( ")"+keywords[j]) >= 0){console.log(keywords[j]+" is present in after ) brace.");flag = 1; break;}
+	if(query.indexOf( "("+keywords[j]) >= 0){console.log(keywords[j]+" is present in after ( brace.");flag = 1; break;}
+	if(query.indexOf( keywords[j] + "\n" ) >= 0){console.log(keywords[j]+" is present before new line.");flag = 1; break;}
+	
+	//if(query.indexOf( keywords[j] + " (") >= 0){console.log(keywords[j]+" is present before ");flag = 1; break;}
     }
     if (flag == 0) { return queryCorrect; }
     else {
