@@ -123,7 +123,10 @@ System.register([], function(exports_1) {
                     if (options && options.range && options.range.to) {
                         timestamp = options.range.to.valueOf();
                     }
-                    var enableTarget = (options.targets[0].enableTarget) ? options.targets[0].enableTarget : false;
+                    var enableTarget = false;
+                    if (options) {
+                        enableTarget = (options.targets[0].enableTarget) ? options.targets[0].enableTarget : false;
+                    }
                     if (enableTarget) {
                         return this.processStatusQueryResponse(data, options, timestamp);
                     }
