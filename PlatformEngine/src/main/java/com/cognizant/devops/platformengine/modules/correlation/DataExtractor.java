@@ -71,9 +71,11 @@ public class DataExtractor{
 				divider=correlation.getSource().getAlmkeyPattern();
 				if(!isDataExtractionInProgress) {
 					if(correlation.getSource().getToolCategory().equals("ALM") && correlation.getDestination().getToolCategory().equals("SCM")) {
+						String almKeyProcessedIndex = correlation.getSource().getAlmKeyProcessedIndex();
+						String almKeysIndex = correlation.getSource().getAlmKeysIndex();
 						isDataExtractionInProgress = true;
-						updateSCMNodesWithAlmKey(divider, sourceTool);
-						cleanSCMNodes(sourceTool);
+						updateSCMNodesWithAlmKey(divider, sourceTool, almKeyProcessedIndex, almKeysIndex);
+						cleanSCMNodes(sourceTool, almKeyProcessedIndex, almKeysIndex);
 						if(correlation.getSource().isEnrichAlmData()) {
 							enrichAlmData(sourceTool);
 						}
@@ -84,12 +86,12 @@ public class DataExtractor{
 		}
 	}
 	
-	private void updateSCMNodesWithAlmKey(String divider, String sourceTool) {
+	private void updateSCMNodesWithAlmKey(String divider, String sourceTool, String almKeyProcessedIndex, String almKeysIndex) {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
-			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeyProcessed");
-			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", "almKeys");
-			String paginationCypher = "MATCH (n:SCM:DATA:RAW) where not exists(n.almKeyProcessed) and exists(n.commitId) return count(n) as count";
+			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", almKeyProcessedIndex);
+			Neo4jFieldIndexRegistry.getInstance().syncFieldIndex("SCM", almKeysIndex);
+			String paginationCypher = "MATCH (n:SCM:DATA:RAW) where not exists(n."+almKeyProcessedIndex+") and exists(n.commitId) return count(n) as count";
 			GraphResponse paginationResponse = dbHandler.executeCypherQuery(paginationCypher);
 			int resultCount = paginationResponse.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 					.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsInt();
@@ -107,9 +109,9 @@ public class DataExtractor{
 				JsonArray dataList = rows.get(0).getAsJsonArray();
 				int processedRecords = dataList.size();
 				String addAlmKeysCypher = "UNWIND {props} as properties MATCH (source:SCM:DATA:RAW {uuid : properties.uuid, commitId: properties.commitId}) "
-						+ "set source.almKeys = properties.almKeys, source.almKeyProcessed = true return count(source)";
+						+ "set source."+almKeysIndex+" = properties."+almKeysIndex+", source."+almKeyProcessedIndex+" = true return count(source)";
 				String updateRawLabelCypher = "UNWIND {props} as properties MATCH (source:SCM:DATA:RAW {uuid : properties.uuid, commitId: properties.commitId}) "
-						+ "set source.almKeyProcessed = true return count(source)";
+						+ "set source."+almKeyProcessedIndex+" = true return count(source)";
 				List<JsonObject> almKeysCypherProps = new ArrayList<JsonObject>();
 				List<JsonObject> updateRawLabelCypherProps = new ArrayList<JsonObject>();
 				JsonObject data = null;
@@ -132,7 +134,7 @@ public class DataExtractor{
 						data.addProperty("uuid", dataJson.get("uuid").getAsString());
 						data.addProperty("commitId", dataJson.get("commitId").getAsString());
 						if(almKeys.size() > 0) {
-							data.add("almKeys", almKeys);
+							data.add(almKeysIndex, almKeys);
 							almKeysCypherProps.add(data);
 						}else {
 							updateRawLabelCypherProps.add(data);
@@ -155,14 +157,14 @@ public class DataExtractor{
 		}
 	}
 	
-	private void cleanSCMNodes(String sourceTool) {
+	private void cleanSCMNodes(String sourceTool, String almKeyProcessedIndex, String almKeysIndex) {
 		Neo4jDBHandler dbHandler = new Neo4jDBHandler();
 		try {
 			int processedRecords = 1;
 			while(processedRecords > 0) {
 				long st = System.currentTimeMillis();
-				String scmCleanUpCypher = "MATCH (n:SCM:DATA) where not n:RAW and exists(n.almKeyProcessed) "
-						+ "WITH distinct n limit "+dataBatchSize+" remove n.almKeyProcessed return count(n)";
+				String scmCleanUpCypher = "MATCH (n:SCM:DATA) where not n:RAW and exists(n."+almKeyProcessedIndex+") "
+						+ "WITH distinct n limit "+dataBatchSize+" remove n."+almKeyProcessedIndex+" return count(n)";
 				GraphResponse response = dbHandler.executeCypherQuery(scmCleanUpCypher);
 				processedRecords = response.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 						.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsInt();

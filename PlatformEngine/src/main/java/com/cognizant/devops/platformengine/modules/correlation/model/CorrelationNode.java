@@ -24,8 +24,10 @@ public class CorrelationNode {
 	private String toolName;
 	private String almkeyPattern;
 	private List<String> fields;
-	private boolean enrichAlmData=false;
 	private String toolCategory;
+	private boolean enrichAlmData=false;
+	private String almKeyProcessedIndex;
+	private String almKeysIndex;
 	public String getToolName() {
 		return toolName;
 	}
@@ -55,5 +57,17 @@ public class CorrelationNode {
 	}
 	public void setEnrichAlmData(boolean enrichAlmData) {
 		this.enrichAlmData = enrichAlmData;
+	}
+	public String getAlmKeyProcessedIndex() {
+		return almKeyProcessedIndex;
+	}
+	public void setAlmKeyProcessedIndex(String almKeyProcessedIndex) {
+		this.almKeyProcessedIndex = almKeyProcessedIndex;
+	}
+	public String getAlmKeysIndex() {
+		return almKeysIndex;
+	}
+	public void setAlmKeysIndex(String almKeysIndex) {
+		this.almKeysIndex = almKeysIndex;
 	}
 }
