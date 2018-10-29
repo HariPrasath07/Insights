@@ -71,6 +71,7 @@ public class DataExtractor{
 				divider=correlation.getSource().getAlmkeyPattern();
 				if(!isDataExtractionInProgress) {
 					if(correlation.getSource().getToolCategory().equals("ALM") && correlation.getDestination().getToolCategory().equals("SCM")) {
+						log.info("DataExtractor - ALM key extraction is in progress from SCM message field.");
 						String almKeyProcessedIndex = correlation.getSource().getAlmKeyProcessedIndex();
 						String almKeysIndex = correlation.getSource().getAlmKeysIndex();
 						isDataExtractionInProgress = true;
@@ -104,6 +105,7 @@ public class DataExtractor{
 				JsonArray rows = response.getJson().get("results").getAsJsonArray().get(0).getAsJsonObject().get("data")
 						.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray();
 				if(rows.isJsonNull() || rows.size() == 0) {
+					log.info("DataExtractor - updateSCMNodesWithAlmKey returns 0 rows.");
 					break;
 				}
 				JsonArray dataList = rows.get(0).getAsJsonArray();
