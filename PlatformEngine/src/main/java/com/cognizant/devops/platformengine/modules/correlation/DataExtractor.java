@@ -98,7 +98,7 @@ public class DataExtractor{
 					.getAsJsonArray().get(0).getAsJsonObject().get("row").getAsJsonArray().get(0).getAsInt();
 			while(resultCount > 0) {
 				long st = System.currentTimeMillis();
-				String scmDataFetchCypher = "MATCH (source:SCM:DATA:RAW) where not exists(source.almKeyProcessed) and exists(source.commitId) "
+				String scmDataFetchCypher = "MATCH (source:SCM:DATA:RAW) where not exists(source."+almKeyProcessedIndex+") and exists(source.commitId) "
 						+ "WITH { uuid: source.uuid, commitId: source.commitId, message: source.message} "
 						+ "as data limit "+dataBatchSize+" return collect(data)";
 				GraphResponse response = dbHandler.executeCypherQuery(scmDataFetchCypher);
