@@ -254,28 +254,13 @@ System.register([], function(exports_1) {
                             flag = 1;
                             break;
                         }
-                        if (query.indexOf(keywords[j] + ")") >= 0) {
-                            console.log(keywords[j] + " is present in before ) brace.");
-                            flag = 1;
-                            break;
-                        }
-                        if (query.indexOf(keywords[j] + "(") >= 0) {
-                            console.log(keywords[j] + " is present in before ( brace.");
-                            flag = 1;
-                            break;
-                        }
-                        if (query.indexOf(")" + keywords[j]) >= 0) {
-                            console.log(keywords[j] + " is present in after ) brace.");
-                            flag = 1;
-                            break;
-                        }
-                        if (query.indexOf("(" + keywords[j]) >= 0) {
-                            console.log(keywords[j] + " is present in after ( brace.");
-                            flag = 1;
-                            break;
-                        }
-                        if (query.indexOf(keywords[j] + "\n") >= 0) {
-                            console.log(keywords[j] + " is present before new line.");
+                        if (query.indexOf(keywords[j] + ")") >= 0
+                            || query.indexOf(keywords[j] + "(") >= 0
+                            || query.indexOf(")" + keywords[j]) >= 0
+                            || query.indexOf("(" + keywords[j]) >= 0
+                            || query.indexOf(" " + keywords[j] + "\n") >= 0
+                            || query.indexOf("\n" + keywords[j] + "\n") >= 0) {
+                            console.log(keywords[j] + " is present.");
                             flag = 1;
                             break;
                         }
