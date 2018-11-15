@@ -46,6 +46,7 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 
 	@Override
 	public JsonObject getCacheResults(String requestPayload) {
+
 		JsonObject resultJson = null;
 		JsonParser parser = new JsonParser();
 		JsonObject requestJson = parser.parse(requestPayload).getAsJsonObject();
@@ -77,10 +78,15 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 		try {
 			StringBuilder stringBuilder = new StringBuilder();
 			Iterator<JsonElement> iterator = json.get(QueryCachingConstants.STATEMENTS).getAsJsonArray().iterator();
+			boolean checkModifier = false;
 			while (iterator.hasNext()) {
 				stringBuilder = stringBuilder
 						.append(iterator.next().getAsJsonObject().get(QueryCachingConstants.STATEMENT).getAsString())
 						.append(QueryCachingConstants.NEW_STATEMENT);
+				checkModifier = validateModifierKeywords(stringBuilder.toString());
+				if (checkModifier) {
+					return null;
+				}
 			}
 			String[] queriesArray = stringBuilder.toString().split(QueryCachingConstants.NEW_STATEMENT);
 			response = Neo4jDbHandler.executeCypherQueryMultiple(queriesArray);
@@ -128,8 +134,13 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 
 				Iterator<JsonElement> iterator = requestJson.get(QueryCachingConstants.STATEMENTS).getAsJsonArray()
 						.iterator();
+				boolean checkModifier = false;
 				while (iterator.hasNext()) {
 					statement = iterator.next().getAsJsonObject().get(QueryCachingConstants.STATEMENT).getAsString();
+					checkModifier = validateModifierKeywords(statement);
+					if (checkModifier) {
+						return null;
+					}
 					String statementWithoutTime = getStatementWithoutTime(statement, startTimeStr, endTimeStr);
 					tempStatementsCombination.append(statementWithoutTime);
 				}
@@ -263,6 +274,25 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 			log.error("\n\nError in reading file!" + e);
 		}
 		return null;
+	}
+
+	private boolean validateModifierKeywords(String query) {
+		boolean isModifier = false;
+		try {
+			String queryToLowerChars = query.toLowerCase();
+			if (queryToLowerChars.contains(" update ") || queryToLowerChars.contains(" update(")
+					|| queryToLowerChars.contains(" delete ") || queryToLowerChars.contains(" delete(")
+					|| queryToLowerChars.contains(" update ") || queryToLowerChars.contains(" update(")
+					|| queryToLowerChars.contains(" detach ") || queryToLowerChars.contains(" detach(")
+					|| queryToLowerChars.contains(" set ") || queryToLowerChars.contains(" set(")
+					|| queryToLowerChars.contains(" create ") || queryToLowerChars.contains(" create(")) {
+				log.debug("Datasource modifier keyword found!");
+				isModifier = true;
+			}
+		} catch (Exception e) {
+			log.error("Exception caught in validateModifierKeywords method.");
+		}
+		return isModifier;
 	}
 
 }
