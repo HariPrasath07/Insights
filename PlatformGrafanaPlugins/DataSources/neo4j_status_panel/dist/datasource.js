@@ -162,11 +162,11 @@ System.register([], function(exports_1) {
                                         });
                                         multiSeriesResponse = true;
                                     }
-                                    targetDataPoints.push([row[1], row[0] * 3000]);
+                                    targetDataPoints.push([row[1], row[0] * 1000]);
                                 }
                                 else {
                                     //Assuming the first column will be the time and second column will be the data.
-                                    datapoints.push([row[1], row[0] * 2000]);
+                                    datapoints.push([row[1], row[0] * 1000]);
                                 }
                             }
                             if (!multiSeriesResponse) {
