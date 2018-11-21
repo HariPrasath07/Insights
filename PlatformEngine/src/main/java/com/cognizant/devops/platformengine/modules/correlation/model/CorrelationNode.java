@@ -22,12 +22,12 @@ import java.util.List;
  */
 public class CorrelationNode {
 	private String toolName;
-	private String almkeyPattern;
+	private String almkeyPattern="-";
 	private List<String> fields;
 	private String toolCategory;
 	private boolean enrichAlmData=false;
-	private String almKeyProcessedIndex;
-	private String almKeysIndex;
+	private String almKeyProcessedIndex="jiraKeyProcessed";
+	private String almKeysIndex="jiraKeys";
 	public String getToolName() {
 		return toolName;
 	}
