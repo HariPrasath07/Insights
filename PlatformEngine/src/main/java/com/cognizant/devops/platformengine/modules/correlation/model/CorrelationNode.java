@@ -24,7 +24,7 @@ public class CorrelationNode {
 	private String toolName;
 	private String almkeyPattern="-";
 	private List<String> fields;
-	private String toolCategory;
+	private String toolCategory=null;
 	private boolean enrichAlmData=false;
 	private String almKeyProcessedIndex="jiraKeyProcessed";
 	private String almKeysIndex="jiraKeys";
