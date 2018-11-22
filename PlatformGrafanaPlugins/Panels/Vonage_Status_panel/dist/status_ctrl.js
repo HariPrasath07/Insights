@@ -101,7 +101,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 					_this.filter = $filter;
 
 					_this.valueHandlers = ['Number Threshold', 'String Threshold', 'Date Threshold', 'Disable Criteria', 'Text Only'];
-					_this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
+					_this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta', 'All'];
 					_this.displayTypes = ['Regular', 'Annotation'];
 					_this.displayAliasTypes = ['Warning / Critical', 'Always'];
 					_this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical', 'Critical Only'];
@@ -204,7 +204,6 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 						if (this.panel.fixedSpan) {
 							this.panel.span = this.panel.fixedSpan;
 						}
-
 						/*	Added Code on top of grafana status panel code.	*/
 						if (this.panel.targets.length == 1 && this.measurementArray.length == 0) {
 							for (var i = 0; i < this.series.length; i++) {
@@ -392,6 +391,7 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 							}
 
 							var value = void 0;
+							var str = void 0;
 							switch (target.aggregation) {
 								case 'Max':
 									value = _.max(s.datapoints, function (point) {
@@ -421,6 +421,14 @@ System.register(["app/plugins/sdk", "lodash", "app/core/time_series2", "app/core
 									break;
 								case 'First':
 									value = s.datapoints[0][0];
+									break;
+								case 'All':
+									//value = s.datapoints[0][0];
+									str = '';
+									_.each(s.datapoints, function (point) {
+										str = str + " \n" + point[0].toString();
+									});
+									value = str;
 									break;
 								default:
 									value = s.datapoints[s.datapoints.length - 1][0];

@@ -43,6 +43,7 @@
 						<a ng-show="display.url" ng-href="{{ display.url | interpolateTemplateVars:this }}" target="_blank" style="color:inherit">{{ display.alias }}</a>
 						<!--Added ShowCase variable to show UserDefined Name-->
 						<!--<span ng-hide="display.url">{{ display.alias }}</b></span>-->
+						<span ng-show="!display.showcase"><b>{{display.alias}}</b></span>
 						<span ng-show="display.showcase"><b>{{display.showcase}}</b></span>
 						
 						<span ng-show="display.isDisplayValue"> - {{ display.display_value | numberOrTextWithRegex : display.valueDisplayRegex }}</span>
@@ -54,7 +55,8 @@
 						<a ng-show="crit.url" ng-href="{{ crit.url | interpolateTemplateVars:this }}" target="_blank" style="color:inherit">{{ crit.alias }}</a>
 						<!--Added ShowCase variable to show UserDefined Name-->
 						<!--<span ng-hide="crit.url">{{ crit.alias }}</span>-->
-						<span ng-show="crit.showcase"><b>{{crit.showcase</b>span>
+						<span ng-show="!crit.showcase"><b>{{crit.alias}}</b></span>
+						<span ng-show="crit.showcase"><b>{{crit.showcase}}</b></span>
 						<span ng-show="crit.isDisplayValue"> - {{ crit.display_value | numberOrTextWithRegex : crit.valueDisplayRegex }}</span>
 					</div>
 
@@ -64,6 +66,7 @@
 						<a ng-show="warn.url" ng-href="{{ warn.url | interpolateTemplateVars:this }}" target="_blank" style="color:inherit">{{ warn.alias }}</a>
 						<!--Added ShowCase variable to show UserDefined Name-->
 						<!--<span ng-hide="warn.url">{{ warn.alias }}</span>-->
+						<span ng-show="!warn.showcase"><b>{{warn.alias}}</b></span>
 						<span ng-show="warn.showcase"><b>{{warn.showcase}}</b></span>
 						<span ng-show="warn.isDisplayValue"> - {{ warn.display_value | numberOrTextWithRegex : warn.valueDisplayRegex }}</span>
 					</div>
@@ -74,6 +77,7 @@
 						<a ng-show="disabled.url" ng-href="{{ disabled.url | interpolateTemplateVars:this }}" target="_blank" style="color:inherit">{{ disabled.alias }}</a>
 						<!--Added ShowCase variable to show UserDefined Name-->
 						<!--<span ng-hide="disabled.url">{{ disabled.alias }}</span>-->
+						<span ng-show="!disabled.showcase"><b>{{disabled.alias}}</b></span>
 						<span ng-show="disabled.showcase"><b>{{disabled.showcase}}</b></span>
 					</div>
 

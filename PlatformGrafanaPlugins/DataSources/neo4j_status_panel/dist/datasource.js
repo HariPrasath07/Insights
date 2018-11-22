@@ -105,8 +105,8 @@ System.register([], function(exports_1) {
                                     targetDataPoints.push([rows[r].row[values], timestamp * 1000]);
                                     finalResponse[values] = response;
                                 }
-                                return response;
                             }
+                            return response;
                         }
                     }
                     return null;

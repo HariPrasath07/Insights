@@ -89,11 +89,9 @@ export default class Neo4jDatasource {
 				let columns = result.columns;
 				let multiSeriesResponse = false;
 				var i:number;
-				
 				for (let r in rows) {
 						let row = rows[r].row;
 						for (let values in rows[r].row) {
-							
 							let targetName = columns[values];
 							let targetDataPoints = targetDatapointsMap[targetName];
 							if (targetDataPoints === undefined) {
@@ -108,8 +106,8 @@ export default class Neo4jDatasource {
 							targetDataPoints.push([rows[r].row[values], timestamp * 1000]);
 							finalResponse[values] = response;						
 						}
-						return response;
 				}
+						return response;
 			  }
 			}
 		return null;		

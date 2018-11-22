@@ -42,7 +42,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		this.filter = $filter;
 
 		this.valueHandlers = ['Number Threshold', 'String Threshold', 'Date Threshold', 'Disable Criteria', 'Text Only'];
-		this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta'];
+		this.aggregations = ['Last', 'First', 'Max', 'Min', 'Sum', 'Avg', 'Delta', 'All'];
 		this.displayTypes = ['Regular', 'Annotation'];
 		this.displayAliasTypes = ['Warning / Critical', 'Always'];
 		this.displayValueTypes = ['Never', 'When Alias Displayed', 'Warning / Critical', 'Critical Only'];
@@ -139,7 +139,6 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 		if (this.panel.fixedSpan) {
 			this.panel.span = this.panel.fixedSpan;
 		}
-		
 		/*	Added Code on top of grafana status panel code.	*/
 		if(this.panel.targets.length == 1 && this.measurementArray.length == 0)
 		{
@@ -330,6 +329,7 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 			}
 
 			let value;
+			let str;
 			switch (target.aggregation) {
 				case 'Max':
 					value = _.max(s.datapoints, (point) => { return point[0]; })[0];
@@ -353,6 +353,15 @@ export class StatusPluginCtrl extends MetricsPanelCtrl {
 					break;
 				case 'First':
 					value = s.datapoints[0][0];
+					break;
+				case 'All':
+					//value = s.datapoints[0][0];
+					str = '';
+					_.each(s.datapoints, (point) => 
+					{ 
+						str = str + " \n" + (point[0]).toString();
+					});
+					value = str;
 					break;
 				default:
 					value = s.datapoints[s.datapoints.length - 1][0];
