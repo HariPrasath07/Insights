@@ -157,15 +157,11 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 				String cacheDetailsHash = getCacheDetailsHash(cachingType, cachingValue);
 				String queryHash = DigestUtils.md5Hex(statement + cacheDetailsHash).toUpperCase();
 				String esQuery = "";
-				// String loadEsCacheQuery = "";
 
 				if (cachingType.equalsIgnoreCase(QueryCachingConstants.FIXED_TIME)) {
-					// loadEsCacheQuery = LOAD_CACHETIME_QUERY_FROM_RESOURCES;
 					esQuery = esQueryWithFixedTime(LOAD_CACHETIME_QUERY_FROM_RESOURCES, currentTime, cachingValue,
 							queryHash);
 				} else {
-					// loadEsCacheQuery =
-					// LOAD_CACHEVARIANCE_QUERY_FROM_RESOURCES;
 					esQuery = esQueryTemplateWithVariance(LOAD_CACHEVARIANCE_QUERY_FROM_RESOURCES, cachingValue,
 							startTime, endTime, queryHash);
 				}
@@ -194,7 +190,6 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 					saveCache.addProperty(QueryCachingConstants.START_TIME_RANGE, startTime);
 					saveCache.addProperty(QueryCachingConstants.END_TIME_RANGE, endTime);
 					saveCache.addProperty(QueryCachingConstants.CACHE_RESULT, graphResponse.toString());
-					saveCache.addProperty(QueryCachingConstants.HAS_EXPIRED, false);
 					saveCache.addProperty(QueryCachingConstants.CREATION_TIME, currentTime);
 
 					esDbHandler.queryES(sourceESCacheUrl, saveCache.toString());
@@ -280,17 +275,17 @@ public class QueryCachingServiceImpl implements QueryCachingService {
 		boolean isModifier = false;
 		try {
 			String queryToLowerChars = query.toLowerCase();
-			if (queryToLowerChars.contains(" update ") || queryToLowerChars.contains(" update(")
-					|| queryToLowerChars.contains(" delete ") || queryToLowerChars.contains(" delete(")
-					|| queryToLowerChars.contains(" update ") || queryToLowerChars.contains(" update(")
-					|| queryToLowerChars.contains(" detach ") || queryToLowerChars.contains(" detach(")
-					|| queryToLowerChars.contains(" set ") || queryToLowerChars.contains(" set(")
-					|| queryToLowerChars.contains(" create ") || queryToLowerChars.contains(" create(")) {
-				log.debug("Datasource modifier keyword found!");
-				isModifier = true;
+			String[] modifierKeywords = { " update ", " update(", ")update ", " delete ", " delete(", ")delete ",
+					" detach ", " detach(", ")detach ", " set ", " set(", ")set ", " create ", " create(", ")create " };
+			for (int i = 0; i < modifierKeywords.length; i++) {
+				if (queryToLowerChars.contains(modifierKeywords[i])) {
+					log.debug("Datasource modifier keyword found!");
+					isModifier = true;
+					break;
+				}
 			}
 		} catch (Exception e) {
-			log.error("Exception caught in validateModifierKeywords method.");
+			log.error("Exception caught in validateModifierKeywords method. " + e);
 		}
 		return isModifier;
 	}
