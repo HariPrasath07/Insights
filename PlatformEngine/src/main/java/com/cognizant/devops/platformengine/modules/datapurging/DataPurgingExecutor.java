@@ -146,20 +146,22 @@ public class DataPurgingExecutor implements Job {
 			String query = getEsPurgeQuery();
 			ElasticSearchDBHandler esDbHandler = new ElasticSearchDBHandler();
 
-			Long time = InsightsUtils.getTimeBeforeDaysInSeconds(
-					new Long(ApplicationConfigProvider.getInstance().getQueryCache().getPurgeEsResultsBefore()));
-			String esCacheIndex = ApplicationConfigProvider.getInstance().getQueryCache().getEsCacheIndex();
+			Long time = InsightsUtils
+					.getTimeBeforeDaysInSeconds(new Long(DataPurgingConstants.PURGE_ES_RESULTS_BEFORE));
+			String esCacheIndex = DataPurgingConstants.ES_CACHE_INDEX;
 			if (esCacheIndex == null)
-				esCacheIndex = "neo4j-cached-results/querycacheresult";
+				esCacheIndex = DataPurgingConstants.DEFAULT_ES_CACHE_INDEX;
 			else
 				esCacheIndex = esCacheIndex + "/querycacheresults";
-			String sourceESCacheUrl = ApplicationConfigProvider.getInstance().getEndpointData()
-					.getElasticSearchEndpoint() + "/" + esCacheIndex + "/_delete_by_query";
+			String sourceESCacheUrl = DataPurgingConstants.ES_HOST + "/" + esCacheIndex + "/_delete_by_query";
 			query = replaceTimeInEsQuery(query, time);
 			JsonObject data = esDbHandler.queryES(sourceESCacheUrl, query);
 			log.debug("Number of Query Cache results deleted: " + data.get("deleted").getAsString());
 		} catch (Exception e) {
 			log.error("Exception occured while clearing Query Cache data from Elasticsearch: " + e);
+			EngineStatusLogger.getInstance().createEngineStatusNode(
+					"Query Cache - Error occured while executing ES purging " + e.getMessage(),
+					PlatformServiceConstants.FAILURE);
 		}
 	}
 
