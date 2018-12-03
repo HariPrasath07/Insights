@@ -62,7 +62,7 @@ class QtestAgent(BaseAgent):
                             nextPageResponse = True
                             entity_type_available = False
                             while nextPageResponse:
-                                restUrl = almEntityRestDetails.get('restUrl', None) + almEntityRestDetails.get('entityType', None) + "?expandProps=false&expandSteps=false&page=" + str(page_num) + "&size=" + str(page_size) + almEntityRestDetails.get('dateTimeStamp', None) + urllib.quote_plus(startFrom.strftime(timeStampFormat)) + "Z"
+                                restUrl = almEntityRestDetails.get('restUrl', None) + almEntityRestDetails.get('entityType', None) + "?expandProps=false&expandSteps=false&expand=descendants&page=" + str(page_num) + "&size=" + str(page_size) + almEntityRestDetails.get('dateTimeStamp', None) + urllib.quote_plus(startFrom.strftime(timeStampFormat)) + "Z"
                                 entityTypeResponse = self.getResponse(restUrl, 'GET', None, None, None, None, headers)
                                 if entityType in pagination and "items" in entityTypeResponse and len(entityTypeResponse["items"]) == 0:
                                     break
@@ -86,7 +86,24 @@ class QtestAgent(BaseAgent):
                                                         injectData['projectName'] = projectName
                                                         injectData['projectId'] = projectId
                                                         injectData['almType'] = entityType
+                                                        #EXTRACTION OF JIRA-KEY FROM NAME FIELD IN REQUIREMENTS.
+                                                        if entityType == 'requirements':
+                                                            if 'name' in res:
+                                                                
+                                                                #matchObj = re.match( r'(.*)-(.*?) .*', res.get('name', ''), re.M|re.I)
+                                                                #injectData['jiraKey'] = '-'.join(matchObj.group(1, 2))
+                                                                
+                                                                #FOR NOW ASSUMING THAT IN NAME FIELD FIRST WORD WILL BE JIRA KEY.
+                                                                injectData['jiraKey'] = res.get('name', '').split(' ')[0]
+                                                        #EXTRACTION PROPERTY VALUES FROM API RESPONSE.
+                                                        if 'properties' in res:
+                                                            for property in res.get('properties', []):
+                                                                injectData[str(property.get('field_name').lower()).replace(' ', '')] = property.get('field_value')
                                                         data += self.parseResponse(responseTemplate, res, injectData)
+                                                        
+                                                        #FOR COLLECTING DATA BEYOND PARENT/ROOT LEVEL. FUNCTION DEFINITION IS AT THE BOTTOM.
+                                                        #self.injectResponseData(data, responseTemplate, res, projectName, projectId, entityType)
+                                                        
                                             #Trace matrix do not support date time format. This is why it is outside if else.
                                             if entityType == "trace-matrix-report":
                                                 dataMatrix = []
@@ -103,7 +120,7 @@ class QtestAgent(BaseAgent):
                                                         injectData['almType'] = "trace-matrix-report"
                                                         injectData['testcases'] = matrix.get("testcases", None)
                                                         injectData['linkedTestCases'] = matrix.get("linked-testcases", None)
-                                                        injectData['pid'] = matrix.get("id", None)
+                                                        injectData['id'] = matrix.get("id", None)
                                                         dataMatrix.append(injectData)
                                                 if len(dataMatrix) > 0:
                                                     self.publishToolsData(dataMatrix, metadata)
@@ -161,6 +178,25 @@ class QtestAgent(BaseAgent):
             entityRestDetails['entityType'] = str(urlExtension.get(entityType, ""))
         if entityType in paginationList:
             entityRestDetails['pagination'] = True
-        return entityRestDetails           
+        return entityRestDetails
+    '''
+    def injectResponseData(self, data, responseTemplate, res, projectName, projectId, entityType):
+        injectData= {}
+        injectData['projectName'] = projectName
+        injectData['projectId'] = projectId
+        injectData['almType'] = entityType
+        if entityType == 'requirements':
+            if 'name' in res:
+                injectData['jiraKey'] = res.get('name', '').split(' ')[0]
+                combinedProperty = {}
+                if 'properties' in res:
+                    for property in res.get('properties', []):
+                        injectData[property.get('field_name')] = property.get('field_value')
+        if "children" in res:
+            for child in res.get('children', None):
+                data += self.parseResponse(responseTemplate, child, injectData)
+                self.injectResponseData(data, responseTemplate, child.get('children', None), projectName, projectId, entityType)
+        data += self.parseResponse(responseTemplate, res, injectData)
+    '''
 if __name__ == "__main__":
     QtestAgent()       
