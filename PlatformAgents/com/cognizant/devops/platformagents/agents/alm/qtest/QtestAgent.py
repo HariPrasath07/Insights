@@ -62,7 +62,7 @@ class QtestAgent(BaseAgent):
                             nextPageResponse = True
                             entity_type_available = False
                             while nextPageResponse:
-                                restUrl = almEntityRestDetails.get('restUrl', None) + almEntityRestDetails.get('entityType', None) + "?expandProps=false&expandSteps=false&expand=descendants&page=" + str(page_num) + "&size=" + str(page_size) + almEntityRestDetails.get('dateTimeStamp', None) + urllib.quote_plus(startFrom.strftime(timeStampFormat)) + "Z"
+                                restUrl = almEntityRestDetails.get('restUrl', None) + almEntityRestDetails.get('entityType', None) + "?expandProps=true&expandSteps=false&expand=descendants&page=" + str(page_num) + "&size=" + str(page_size) + almEntityRestDetails.get('dateTimeStamp', None) + urllib.quote_plus(startFrom.strftime(timeStampFormat)) + "Z"
                                 entityTypeResponse = self.getResponse(restUrl, 'GET', None, None, None, None, headers)
                                 if entityType in pagination and "items" in entityTypeResponse and len(entityTypeResponse["items"]) == 0:
                                     break
@@ -73,6 +73,7 @@ class QtestAgent(BaseAgent):
                                 if len(entityTypeResponse) > 0:
                                     entity_type_available = True
                                     try:
+                                        self.reqIdSet = set()
                                         for res in entityTypeResponse:
                                             lastUpdated = res.get('last_modified_date', None)
                                             if lastUpdated > entityUpdatedDate:
@@ -95,6 +96,7 @@ class QtestAgent(BaseAgent):
                                                                 
                                                                 #FOR NOW ASSUMING THAT IN NAME FIELD FIRST WORD WILL BE JIRA KEY.
                                                                 injectData['jiraKey'] = res.get('name', '').split(' ')[0]
+                                                                self.reqIdSet.add(str(res.get('id', None)))
                                                         #EXTRACTION PROPERTY VALUES FROM API RESPONSE.
                                                         if 'properties' in res:
                                                             for property in res.get('properties', []):
@@ -124,6 +126,25 @@ class QtestAgent(BaseAgent):
                                                         dataMatrix.append(injectData)
                                                 if len(dataMatrix) > 0:
                                                     self.publishToolsData(dataMatrix, metadata)
+                                        #This seperate api call will give link between requirements and test-cases.
+                                        if self.reqIdSet and entityType == "requirements":
+                                            restUrlLinkedArtifact = almEntityRestDetails.get('restUrl', None) + "linked-artifacts" + "?type=" + entityType + "&ids=" + ','.join(self.reqIdSet)
+                                            restResponseLinkedArtifact = self.getResponse(restUrlLinkedArtifact, 'GET', None, None, None, None, headers)
+                                            linkedData = []
+                                            for artifacts in restResponseLinkedArtifact:
+                                                for object in artifacts.get('objects', {}):
+                                                    injectData = {}
+                                                    injectData["id"] = artifacts.get('id', None)
+                                                    injectData["testCaseId"] = object.get('id', None)
+                                                    injectData["pid"] = object.get('pid', None)
+                                                    injectData["linkType"] = object.get('link_type', None)
+                                                    injectData["almType"] = entityType
+                                                    injectData["almLinkType"] = "test-cases"
+                                                    injectData['projectId'] = projectId
+                                                    linkedData.append(injectData)
+                                            if linkedData:
+                                                relationMetadata = self.config.get("dynamicTemplate", {}).get("relationMetadata", None)
+                                                self.publishToolsData(linkedData, relationMetadata)
                                     except Exception as ex:
                                         nextPageResponse = False
                                         entity_type_available = False
@@ -140,7 +161,10 @@ class QtestAgent(BaseAgent):
                                     nextPageResponse = False
                             if entity_type_available and entityUpdatedDate is not None:
                                 trackingDetails[entityType] = {"entityUpdatedDate": entityUpdatedDate}
-                            metadata = self.config.get("dynamicTemplate", {}).get("almEntityMetaData", None)
+                            #metadata = self.config.get("dynamicTemplate", {}).get("almEntityMetaData", None)
+                            metadata = self.config.get("dynamicTemplate", {}).get("almEntities", {}).get(entityType, {}).get("almEntityMetaData", None)
+                            if not metadata:
+                                metadata = self.config.get("dynamicTemplate", {}).get("almEntityMetaData", None)
                             if len(data) > 0:
                                 self.publishToolsData(data, metadata)
                         self.tracking[str(projectId)] = trackingDetails

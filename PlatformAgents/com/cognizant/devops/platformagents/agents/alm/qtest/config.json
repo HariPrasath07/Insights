@@ -57,12 +57,19 @@
         "last_modified_date": "lastModifiedDate"
       },
       "test-cases": {
-        "name": "name",
+        "name": "Name",
         "pid": "pid",
-        "id": "id",
+        "id": "testCaseId",
         "created_date": "creationDate",
         "description": "description",
-        "last_modified_date": "lastModifiedDate"
+        "last_modified_date": "lastModifiedDate",
+        "almEntityMetaData": {
+          "dataUpdateSupported": true,
+          "uniqueKey": [
+            "projectId",
+            "testCaseId"
+          ]
+        }
       },
       "requirements": {
         "name": "name",
@@ -101,6 +108,31 @@
         "id",
         "almType"
       ]
+    },
+    "relationMetadata": {
+      "labels": [
+        "LATEST"
+      ],
+      "relation": {
+        "properties": [
+          "pid",
+          "projectId"
+        ],
+        "name": "REQUIREMENT_IS_RELATED",
+        "source": {
+          "constraints": [
+            "id",
+            "almType",
+            "projectId"
+          ]
+        },
+        "destination": {
+          "constraints": [
+            "testCaseId",
+            "projectId"
+          ]
+        }
+      }
     }
   },
   "toolCategory": "ALM",
