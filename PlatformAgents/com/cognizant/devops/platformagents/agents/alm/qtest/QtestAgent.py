@@ -63,7 +63,12 @@ class QtestAgent(BaseAgent):
                             entity_type_available = False
                             while nextPageResponse:
                                 restUrl = almEntityRestDetails.get('restUrl', None) + almEntityRestDetails.get('entityType', None) + "?expandProps=true&expandSteps=false&expand=descendants&page=" + str(page_num) + "&size=" + str(page_size) + almEntityRestDetails.get('dateTimeStamp', None) + urllib.quote_plus(startFrom.strftime(timeStampFormat)) + "Z"
-                                entityTypeResponse = self.getResponse(restUrl, 'GET', None, None, None, None, headers)
+                                try:
+                                    entityTypeResponse = self.getResponse(restUrl, 'GET', None, None, None, None, headers)
+                                except Exception as ex1:
+                                    nextPageResponse = False
+                                    logging.error("ProjectID: " + str(projectId) + " Type: " +str(entityType) + " URL: " + str(restUrl) + "  " + str(ex1))
+                                    break
                                 if entityType in pagination and "items" in entityTypeResponse and len(entityTypeResponse["items"]) == 0:
                                     break
                                 elif entityType in pagination and "items" in entityTypeResponse and len(entityTypeResponse["items"]) > 0:
